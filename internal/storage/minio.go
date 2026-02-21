@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -74,6 +75,25 @@ func (m *MinIOClient) Download(ctx context.Context, bucket, objectName string) (
 		return nil, fmt.Errorf("failed to download object: %w", err)
 	}
 	return object, nil
+}
+
+// DownloadByPath downloads an object by path (e.g. "/audios/lecture-id/audio-id.mp3") and returns its bytes.
+func (m *MinIOClient) DownloadByPath(ctx context.Context, path string) ([]byte, error) {
+	path = strings.TrimPrefix(path, "/")
+	if path == "" {
+		return nil, fmt.Errorf("empty path")
+	}
+	parts := strings.SplitN(path, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid path: %s", path)
+	}
+	bucket, objectName := parts[0], parts[1]
+	obj, err := m.Download(ctx, bucket, objectName)
+	if err != nil {
+		return nil, err
+	}
+	defer obj.Close()
+	return io.ReadAll(obj)
 }
 
 func (m *MinIOClient) Delete(ctx context.Context, bucket, objectName string) error {

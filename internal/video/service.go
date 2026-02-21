@@ -53,10 +53,19 @@ func (s *service) CreateFromAudio(ctx context.Context, req CreateVideoRequest, a
 		return nil, fmt.Errorf("failed to read avatar file: %w", err)
 	}
 
+	// Fetch audio from MinIO by audio_id (aud.URL is path like /audios/lecture-id/audio-id.mp3)
+	audioData, err := s.minioClient.DownloadByPath(ctx, aud.URL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get audio from storage: %w", err)
+	}
+	if len(audioData) == 0 {
+		return nil, fmt.Errorf("audio file in storage is empty")
+	}
+
 	avatarID := uuid.New()
 	avatarObjectName := fmt.Sprintf("%s/%s", req.AudioID.String(), avatarID.String()+getFileExtension(avatarFilename))
 
-	avatarURL, err := s.minioClient.Upload(
+	_, err = s.minioClient.Upload(
 		ctx,
 		s.avatarBucket,
 		avatarObjectName,
@@ -81,16 +90,18 @@ func (s *service) CreateFromAudio(ctx context.Context, req CreateVideoRequest, a
 		return nil, err
 	}
 
-	go s.processLipsync(context.Background(), videoID, avatarURL, aud.URL)
+	// Send avatar (from request) + audio (from MinIO) to sync API; sync creates video and uploads to MinIO
+	audioFilename := "audio.mp3"
+	if ext := getFileExtension(aud.URL); ext != "" {
+		audioFilename = "audio" + ext
+	}
+	go s.processLipsyncWithFiles(context.Background(), videoID, avatarData, audioData, avatarFilename, audioFilename)
 
 	return video, nil
 }
 
-func (s *service) processLipsync(ctx context.Context, videoID uuid.UUID, avatarURL, audioURL string) {
-	avatarFullURL := fmt.Sprintf("http://%s%s", s.minioEndpoint, avatarURL)
-	audioFullURL := fmt.Sprintf("http://%s%s", s.minioEndpoint, audioURL)
-
-	syncResp, err := s.lipsyncClient.CreateLipsyncJob(ctx, avatarFullURL, audioFullURL)
+func (s *service) processLipsyncWithFiles(ctx context.Context, videoID uuid.UUID, avatarData, audioData []byte, avatarFilename, audioFilename string) {
+	syncResp, err := s.lipsyncClient.CreateLipsyncJobWithFiles(ctx, avatarData, audioData, avatarFilename, audioFilename)
 	if err != nil {
 		s.repo.UpdateStatus(ctx, videoID, "failed")
 		return

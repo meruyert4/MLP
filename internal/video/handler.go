@@ -40,19 +40,20 @@ func (h *Handler) CreateFromAudio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	file, header, err := r.FormFile("avatar")
+	avatarFile, avatarHeader, err := r.FormFile("avatar")
 	if err != nil {
 		h.logger.Error("failed to get avatar file", zap.Error(err))
 		respondWithError(w, http.StatusBadRequest, "avatar file is required")
 		return
 	}
-	defer file.Close()
+	defer avatarFile.Close()
 
 	req := CreateVideoRequest{
 		AudioID: audioID,
 	}
 
-	video, err := h.service.CreateFromAudio(r.Context(), req, file, header.Filename)
+	// Audio is fetched from MinIO by audio_id; client sends only avatar
+	video, err := h.service.CreateFromAudio(r.Context(), req, avatarFile, avatarHeader.Filename)
 	if err != nil {
 		h.logger.Error("failed to create video", zap.Error(err), zap.String("audio_id", audioIDStr))
 		respondWithError(w, http.StatusInternalServerError, "failed to create video, please try again")
