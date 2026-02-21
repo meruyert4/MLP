@@ -1,0 +1,12 @@
+venv
+.env
+__pycache__
+*.pyc
+*.db
+.git
+.gitignore
+output
+postman
+*.md
+.pytest_cache
+.mypy_cache

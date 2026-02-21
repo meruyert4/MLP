@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mlp-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mlp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: mlp-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  lipsync:
+    build:
+      context: ./lipsync-service
+      dockerfile: Dockerfile
+    container_name: mlp-lipsync
+    environment:
+      SYNC_API_KEY: ${SYNC_API_KEY}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./lipsync-service:/app
+    depends_on:
+      - minio
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mlp-app
+    environment:
+      APP_PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: mlp
+      JWT_SECRET: supersecretkey
+      JWT_EXPIRATION: 24h
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: mlp-storage
+      MINIO_USE_SSL: false
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      TTS_API_KEY: ${TTS_API_KEY}
+      SYNC_API_KEY: ${SYNC_API_KEY}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  minio_data:
