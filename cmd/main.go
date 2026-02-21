@@ -120,7 +120,10 @@ func main() {
 		r.Use(authMiddleware.Authenticate)
 		r.Post("/", lectureHandler.GenerateLecture)
 		r.Get("/", lectureHandler.GetByUserID)
-		r.Get("/{id}", lectureHandler.GetByID)
+		r.Route("/{id}", func(r chi.Router) {
+			r.Post("/test", lectureHandler.GenerateTest)
+			r.Get("/", lectureHandler.GetByID)
+		})
 	})
 
 	r.Route("/api/v1/audios", func(r chi.Router) {

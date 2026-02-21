@@ -25,3 +25,15 @@ type GenerateLectureResponse struct {
 	Content string    `json:"content"`
 	Status  string    `json:"status"`
 }
+
+// TestQuestion is a single question with 4 variants and the correct answer.
+type TestQuestion struct {
+	Question       string   `json:"question"`
+	Variants       []string `json:"variants"`
+	CorrectVariant string   `json:"correct_variant"`
+}
+
+// GenerateTestResponse is the response for generated test (10 questions).
+type GenerateTestResponse struct {
+	Questions []TestQuestion `json:"questions"`
+}

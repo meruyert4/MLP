@@ -44,6 +44,7 @@ This directory contains Postman collection and environment files for testing the
 - **POST** Create Lecture - Create a new lecture
 - **GET** Get All User Lectures - Retrieve all lectures for authenticated user
 - **GET** Get Lecture by ID - Retrieve specific lecture
+- **POST** Generate Test - Generate a 10-question test (4 variants per question) from a lecture by ID
 
 ### 4. Audios (Authenticated)
 - **GET** Get Audio by ID - Retrieve specific audio
@@ -155,6 +156,7 @@ If you need to manually set a token:
 4. **Create Lecture** → Create a new lecture (auto-saves lecture_id)
 5. **Get All User Lectures** → View all your lectures
 6. **Get Lecture by ID** → View specific lecture details
+7. **Generate Test** → Generate a 10-question multiple-choice test from a lecture (uses `lecture_id`)
 7. **Get Audios by Lecture ID** → View audios for the lecture
 8. **Get Videos by Audio ID** → View videos for an audio
 

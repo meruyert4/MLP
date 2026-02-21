@@ -13,6 +13,7 @@ type Service interface {
 	GenerateLecture(ctx context.Context, userID uuid.UUID, req CreateLectureRequest) (*GenerateLectureResponse, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]Lecture, error)
+	GenerateTest(ctx context.Context, lectureID uuid.UUID) (*GenerateTestResponse, error)
 }
 
 type service struct {
@@ -60,4 +61,28 @@ func (s *service) GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error) {
 
 func (s *service) GetByUserID(ctx context.Context, userID uuid.UUID) ([]Lecture, error) {
 	return s.repo.GetByUserID(ctx, userID)
+}
+
+func (s *service) GenerateTest(ctx context.Context, lectureID uuid.UUID) (*GenerateTestResponse, error) {
+	lecture, err := s.repo.GetByID(ctx, lectureID)
+	if err != nil {
+		return nil, err
+	}
+
+	test, err := s.geminiClient.GenerateTest(ctx, lecture.Content)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &GenerateTestResponse{
+		Questions: make([]TestQuestion, len(test.Questions)),
+	}
+	for i, q := range test.Questions {
+		out.Questions[i] = TestQuestion{
+			Question:       q.Question,
+			Variants:       q.Variants,
+			CorrectVariant: q.CorrectVariant,
+		}
+	}
+	return out, nil
 }

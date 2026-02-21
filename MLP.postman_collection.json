@@ -202,6 +202,30 @@
 						"description": "Get a specific lecture by ID"
 					},
 					"response": []
+				},
+				{
+					"name": "Generate Test",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/lectures/{{lecture_id}}/test",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "lectures", "{{lecture_id}}", "test"]
+						},
+						"description": "Generate a 10-question multiple-choice test (4 variants per question, correct answer in separate field) based on the lecture content."
+					},
+					"response": []
 				}
 			]
 		},

@@ -68,6 +68,24 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, lecture)
 }
 
+func (h *Handler) GenerateTest(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid lecture id")
+		return
+	}
+
+	test, err := h.service.GenerateTest(r.Context(), id)
+	if err != nil {
+		h.logger.Error("failed to generate test", zap.Error(err), zap.String("lecture_id", idStr))
+		respondWithError(w, http.StatusInternalServerError, "failed to generate test, please try again")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, test)
+}
+
 func (h *Handler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(uuid.UUID)
 	if !ok {
