@@ -34,17 +34,20 @@ type JWTConfig struct {
 }
 
 type MinIOConfig struct {
-	Endpoint  string
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	UseSSL    bool
+	Endpoint      string
+	AccessKey     string
+	SecretKey     string
+	BucketAudios  string
+	BucketVideos  string
+	BucketAvatars string
+	UseSSL        bool
 }
 
 type APIConfig struct {
-	GeminiKey string
-	TTSKey    string
-	SyncKey   string
+	GeminiKey    string
+	GeminiModel  string
+	VoiceRSSKey  string
+	SyncKey      string
 }
 
 func Load() (*Config, error) {
@@ -73,16 +76,19 @@ func Load() (*Config, error) {
 			Expiration: jwtExp,
 		},
 		MinIO: MinIOConfig{
-			Endpoint:  getEnv("MINIO_ENDPOINT", "localhost:9000"),
-			AccessKey: getEnv("MINIO_ACCESS_KEY", "minioadmin"),
-			SecretKey: getEnv("MINIO_SECRET_KEY", "minioadmin"),
-			Bucket:    getEnv("MINIO_BUCKET", "mlp-storage"),
-			UseSSL:    getEnv("MINIO_USE_SSL", "false") == "true",
+			Endpoint:      getEnv("MINIO_ENDPOINT", "localhost:9000"),
+			AccessKey:     getEnv("MINIO_ACCESS_KEY", "minioadmin"),
+			SecretKey:     getEnv("MINIO_SECRET_KEY", "minioadmin"),
+			BucketAudios:  getEnv("MINIO_BUCKET_AUDIOS", "audios"),
+			BucketVideos:  getEnv("MINIO_BUCKET_VIDEOS", "videos"),
+			BucketAvatars: getEnv("MINIO_BUCKET_AVATARS", "avatars"),
+			UseSSL:        getEnv("MINIO_USE_SSL", "false") == "true",
 		},
 		API: APIConfig{
-			GeminiKey: getEnv("GEMINI_API_KEY", ""),
-			TTSKey:    getEnv("TTS_API_KEY", ""),
-			SyncKey:   getEnv("SYNC_API_KEY", ""),
+			GeminiKey:   getEnv("GEMINI_API_KEY", ""),
+			GeminiModel: getEnv("GEMINI_MODEL", "gemini-2.0-flash-lite"),
+			VoiceRSSKey: getEnv("VOICERSS_API_KEY", ""),
+			SyncKey:     getEnv("SYNC_API_KEY", ""),
 		},
 	}
 

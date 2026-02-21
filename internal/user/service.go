@@ -31,6 +31,12 @@ func NewService(repo Repository, jwtSecret string, jwtExpiry time.Duration) Serv
 }
 
 func (s *service) Register(ctx context.Context, req RegisterRequest) (*User, error) {
+	// Check if user already exists
+	existingUser, err := s.repo.GetByEmail(ctx, req.Email)
+	if err == nil && existingUser != nil {
+		return nil, fmt.Errorf("email already exists")
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)

@@ -15,6 +15,9 @@ import (
 	"mlp/internal/storage"
 	"mlp/internal/user"
 	"mlp/internal/video"
+	"mlp/pkg/gemini"
+	"mlp/pkg/lipsync"
+	"mlp/pkg/voicerss"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -51,7 +54,9 @@ func main() {
 		cfg.MinIO.Endpoint,
 		cfg.MinIO.AccessKey,
 		cfg.MinIO.SecretKey,
-		cfg.MinIO.Bucket,
+		cfg.MinIO.BucketAudios,
+		cfg.MinIO.BucketVideos,
+		cfg.MinIO.BucketAvatars,
 		cfg.MinIO.UseSSL,
 		logger,
 	)
@@ -59,25 +64,29 @@ func main() {
 		logger.Fatal("failed to create minio client", zap.Error(err))
 	}
 
-	if err := minioClient.EnsureBucket(ctx); err != nil {
-		logger.Fatal("failed to ensure minio bucket", zap.Error(err))
+	if err := minioClient.EnsureBuckets(ctx); err != nil {
+		logger.Fatal("failed to ensure minio buckets", zap.Error(err))
 	}
-	logger.Info("connected to minio")
+	logger.Info("connected to minio and ensured buckets")
+
+	geminiClient := gemini.NewClient(cfg.API.GeminiKey, cfg.API.GeminiModel)
+	voiceRSSClient := voicerss.NewClient(cfg.API.VoiceRSSKey)
+	lipsyncClient := lipsync.NewClient("http://lipsync:5000")
 
 	userRepo := user.NewRepository(dbPool)
 	userService := user.NewService(userRepo, cfg.JWT.Secret, cfg.JWT.Expiration)
 	userHandler := user.NewHandler(userService, logger)
 
 	lectureRepo := lecture.NewRepository(dbPool)
-	lectureService := lecture.NewService(lectureRepo)
+	lectureService := lecture.NewService(lectureRepo, geminiClient)
 	lectureHandler := lecture.NewHandler(lectureService, logger)
 
 	audioRepo := audio.NewRepository(dbPool)
-	audioService := audio.NewService(audioRepo)
+	audioService := audio.NewService(audioRepo, lectureRepo, voiceRSSClient, minioClient, cfg.MinIO.BucketAudios)
 	audioHandler := audio.NewHandler(audioService, logger)
 
 	videoRepo := video.NewRepository(dbPool)
-	videoService := video.NewService(videoRepo)
+	videoService := video.NewService(videoRepo, audioRepo, minioClient, lipsyncClient, cfg.MinIO.BucketVideos, cfg.MinIO.BucketAvatars, cfg.MinIO.Endpoint)
 	videoHandler := video.NewHandler(videoService, logger)
 
 	authMiddleware := middleware.NewAuthMiddleware(cfg.JWT.Secret, logger)
@@ -109,19 +118,21 @@ func main() {
 
 	r.Route("/api/v1/lectures", func(r chi.Router) {
 		r.Use(authMiddleware.Authenticate)
-		r.Post("/", lectureHandler.Create)
+		r.Post("/", lectureHandler.GenerateLecture)
 		r.Get("/", lectureHandler.GetByUserID)
 		r.Get("/{id}", lectureHandler.GetByID)
 	})
 
 	r.Route("/api/v1/audios", func(r chi.Router) {
 		r.Use(authMiddleware.Authenticate)
+		r.Post("/", audioHandler.CreateFromLecture)
 		r.Get("/{id}", audioHandler.GetByID)
 		r.Get("/lecture/{lecture_id}", audioHandler.GetByLectureID)
 	})
 
 	r.Route("/api/v1/videos", func(r chi.Router) {
 		r.Use(authMiddleware.Authenticate)
+		r.Post("/", videoHandler.CreateFromAudio)
 		r.Get("/{id}", videoHandler.GetByID)
 		r.Get("/audio/{audio_id}", videoHandler.GetByAudioID)
 	})

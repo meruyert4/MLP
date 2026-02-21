@@ -34,6 +34,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.service.Register(r.Context(), req)
 	if err != nil {
+		// Check for specific errors
+		if err.Error() == "email already exists" {
+			respondWithError(w, http.StatusConflict, "email already exists")
+			return
+		}
 		h.logger.Error("failed to register user", zap.Error(err))
 		respondWithError(w, http.StatusInternalServerError, "failed to register user")
 		return
@@ -57,8 +62,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	response, err := h.service.Login(r.Context(), req)
 	if err != nil {
-		h.logger.Error("failed to login", zap.Error(err))
-		respondWithError(w, http.StatusUnauthorized, "invalid credentials")
+		h.logger.Error("failed to login", zap.Error(err), zap.String("email", req.Email))
+		respondWithError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 

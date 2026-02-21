@@ -11,12 +11,14 @@ import (
 )
 
 type MinIOClient struct {
-	client *minio.Client
-	bucket string
-	logger *zap.Logger
+	client        *minio.Client
+	bucketAudios  string
+	bucketVideos  string
+	bucketAvatars string
+	logger        *zap.Logger
 }
 
-func NewMinIOClient(endpoint, accessKey, secretKey, bucket string, useSSL bool, logger *zap.Logger) (*MinIOClient, error) {
+func NewMinIOClient(endpoint, accessKey, secretKey, bucketAudios, bucketVideos, bucketAvatars string, useSSL bool, logger *zap.Logger) (*MinIOClient, error) {
 	client, err := minio.New(endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: useSSL,
@@ -26,58 +28,64 @@ func NewMinIOClient(endpoint, accessKey, secretKey, bucket string, useSSL bool, 
 	}
 
 	return &MinIOClient{
-		client: client,
-		bucket: bucket,
-		logger: logger,
+		client:        client,
+		bucketAudios:  bucketAudios,
+		bucketVideos:  bucketVideos,
+		bucketAvatars: bucketAvatars,
+		logger:        logger,
 	}, nil
 }
 
-func (m *MinIOClient) EnsureBucket(ctx context.Context) error {
-	exists, err := m.client.BucketExists(ctx, m.bucket)
-	if err != nil {
-		return fmt.Errorf("failed to check bucket existence: %w", err)
-	}
-
-	if !exists {
-		err = m.client.MakeBucket(ctx, m.bucket, minio.MakeBucketOptions{})
+func (m *MinIOClient) EnsureBuckets(ctx context.Context) error {
+	buckets := []string{m.bucketAudios, m.bucketVideos, m.bucketAvatars}
+	
+	for _, bucket := range buckets {
+		exists, err := m.client.BucketExists(ctx, bucket)
 		if err != nil {
-			return fmt.Errorf("failed to create bucket: %w", err)
+			return fmt.Errorf("failed to check bucket %s existence: %w", bucket, err)
 		}
-		m.logger.Info("bucket created", zap.String("bucket", m.bucket))
+
+		if !exists {
+			err = m.client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to create bucket %s: %w", bucket, err)
+			}
+			m.logger.Info("bucket created", zap.String("bucket", bucket))
+		}
 	}
 
 	return nil
 }
 
-func (m *MinIOClient) Upload(ctx context.Context, objectName string, reader io.Reader, objectSize int64, contentType string) (string, error) {
-	_, err := m.client.PutObject(ctx, m.bucket, objectName, reader, objectSize, minio.PutObjectOptions{
+func (m *MinIOClient) Upload(ctx context.Context, bucket, objectName string, reader io.Reader, objectSize int64, contentType string) (string, error) {
+	_, err := m.client.PutObject(ctx, bucket, objectName, reader, objectSize, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload object: %w", err)
 	}
 
-	return fmt.Sprintf("/%s/%s", m.bucket, objectName), nil
+	return fmt.Sprintf("/%s/%s", bucket, objectName), nil
 }
 
-func (m *MinIOClient) Download(ctx context.Context, objectName string) (*minio.Object, error) {
-	object, err := m.client.GetObject(ctx, m.bucket, objectName, minio.GetObjectOptions{})
+func (m *MinIOClient) Download(ctx context.Context, bucket, objectName string) (*minio.Object, error) {
+	object, err := m.client.GetObject(ctx, bucket, objectName, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to download object: %w", err)
 	}
 	return object, nil
 }
 
-func (m *MinIOClient) Delete(ctx context.Context, objectName string) error {
-	err := m.client.RemoveObject(ctx, m.bucket, objectName, minio.RemoveObjectOptions{})
+func (m *MinIOClient) Delete(ctx context.Context, bucket, objectName string) error {
+	err := m.client.RemoveObject(ctx, bucket, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to delete object: %w", err)
 	}
 	return nil
 }
 
-func (m *MinIOClient) GetPresignedURL(ctx context.Context, objectName string) (string, error) {
-	url, err := m.client.PresignedGetObject(ctx, m.bucket, objectName, 3600, nil)
+func (m *MinIOClient) GetPresignedURL(ctx context.Context, bucket, objectName string) (string, error) {
+	url, err := m.client.PresignedGetObject(ctx, bucket, objectName, 3600, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get presigned url: %w", err)
 	}

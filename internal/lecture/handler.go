@@ -21,7 +21,7 @@ func NewHandler(service Service, logger *zap.Logger) *Handler {
 	}
 }
 
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GenerateLecture(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value("user_id").(uuid.UUID)
 	if !ok {
 		respondWithError(w, http.StatusUnauthorized, "unauthorized")
@@ -35,10 +35,15 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lecture, err := h.service.Create(r.Context(), userID, req)
+	if req.Topic == "" {
+		respondWithError(w, http.StatusBadRequest, "topic is required")
+		return
+	}
+
+	lecture, err := h.service.GenerateLecture(r.Context(), userID, req)
 	if err != nil {
-		h.logger.Error("failed to create lecture", zap.Error(err))
-		respondWithError(w, http.StatusInternalServerError, "failed to create lecture")
+		h.logger.Error("failed to generate lecture", zap.Error(err), zap.String("topic", req.Topic))
+		respondWithError(w, http.StatusInternalServerError, "failed to generate lecture, please try again")
 		return
 	}
 
@@ -55,7 +60,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	lecture, err := h.service.GetByID(r.Context(), id)
 	if err != nil {
-		h.logger.Error("failed to get lecture", zap.Error(err))
+		h.logger.Error("failed to get lecture", zap.Error(err), zap.String("lecture_id", idStr))
 		respondWithError(w, http.StatusNotFound, "lecture not found")
 		return
 	}
@@ -72,8 +77,8 @@ func (h *Handler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 
 	lectures, err := h.service.GetByUserID(r.Context(), userID)
 	if err != nil {
-		h.logger.Error("failed to get lectures", zap.Error(err))
-		respondWithError(w, http.StatusInternalServerError, "failed to get lectures")
+		h.logger.Error("failed to get lectures", zap.Error(err), zap.String("user_id", userID.String()))
+		respondWithError(w, http.StatusInternalServerError, "failed to retrieve lectures")
 		return
 	}
 

@@ -12,6 +12,8 @@ type Repository interface {
 	Create(ctx context.Context, video *Video) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Video, error)
 	GetByAudioID(ctx context.Context, audioID uuid.UUID) ([]Video, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	UpdateURL(ctx context.Context, id uuid.UUID, url string) error
 }
 
 type repository struct {
@@ -24,10 +26,10 @@ func NewRepository(db *pgxpool.Pool) Repository {
 
 func (r *repository) Create(ctx context.Context, video *Video) error {
 	query := `
-		INSERT INTO videos (id, audio_id, url, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO videos (id, audio_id, url, status, created_at)
+		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := r.db.Exec(ctx, query, video.ID, video.AudioID, video.URL, video.CreatedAt)
+	_, err := r.db.Exec(ctx, query, video.ID, video.AudioID, video.URL, video.Status, video.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create video: %w", err)
 	}
@@ -36,7 +38,7 @@ func (r *repository) Create(ctx context.Context, video *Video) error {
 
 func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Video, error) {
 	query := `
-		SELECT id, audio_id, url, created_at
+		SELECT id, audio_id, url, status, created_at
 		FROM videos
 		WHERE id = $1
 	`
@@ -45,6 +47,7 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Video, error) 
 		&video.ID,
 		&video.AudioID,
 		&video.URL,
+		&video.Status,
 		&video.CreatedAt,
 	)
 	if err != nil {
@@ -55,7 +58,7 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Video, error) 
 
 func (r *repository) GetByAudioID(ctx context.Context, audioID uuid.UUID) ([]Video, error) {
 	query := `
-		SELECT id, audio_id, url, created_at
+		SELECT id, audio_id, url, status, created_at
 		FROM videos
 		WHERE audio_id = $1
 		ORDER BY created_at DESC
@@ -69,11 +72,23 @@ func (r *repository) GetByAudioID(ctx context.Context, audioID uuid.UUID) ([]Vid
 	var videos []Video
 	for rows.Next() {
 		var video Video
-		if err := rows.Scan(&video.ID, &video.AudioID, &video.URL, &video.CreatedAt); err != nil {
+		if err := rows.Scan(&video.ID, &video.AudioID, &video.URL, &video.Status, &video.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan video: %w", err)
 		}
 		videos = append(videos, video)
 	}
 
 	return videos, nil
+}
+
+func (r *repository) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	query := `UPDATE videos SET status = $1 WHERE id = $2`
+	_, err := r.db.Exec(ctx, query, status, id)
+	return err
+}
+
+func (r *repository) UpdateURL(ctx context.Context, id uuid.UUID, url string) error {
+	query := `UPDATE videos SET url = $1, status = $2 WHERE id = $3`
+	_, err := r.db.Exec(ctx, query, url, "completed", id)
+	return err
 }

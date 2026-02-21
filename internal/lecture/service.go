@@ -4,29 +4,41 @@ import (
 	"context"
 	"time"
 
+	"mlp/pkg/gemini"
+
 	"github.com/google/uuid"
 )
 
 type Service interface {
-	Create(ctx context.Context, userID uuid.UUID, req CreateLectureRequest) (*Lecture, error)
+	GenerateLecture(ctx context.Context, userID uuid.UUID, req CreateLectureRequest) (*GenerateLectureResponse, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error)
 	GetByUserID(ctx context.Context, userID uuid.UUID) ([]Lecture, error)
 }
 
 type service struct {
-	repo Repository
+	repo          Repository
+	geminiClient  *gemini.Client
 }
 
-func NewService(repo Repository) Service {
-	return &service{repo: repo}
+func NewService(repo Repository, geminiClient *gemini.Client) Service {
+	return &service{
+		repo:         repo,
+		geminiClient: geminiClient,
+	}
 }
 
-func (s *service) Create(ctx context.Context, userID uuid.UUID, req CreateLectureRequest) (*Lecture, error) {
+func (s *service) GenerateLecture(ctx context.Context, userID uuid.UUID, req CreateLectureRequest) (*GenerateLectureResponse, error) {
+	content, err := s.geminiClient.GenerateLecture(ctx, req.Topic)
+	if err != nil {
+		return nil, err
+	}
+
 	lecture := &Lecture{
 		ID:        uuid.New(),
 		UserID:    userID,
 		Topic:     req.Topic,
-		Content:   req.Content,
+		Content:   content,
+		Status:    "completed",
 		CreatedAt: time.Now(),
 	}
 
@@ -34,7 +46,12 @@ func (s *service) Create(ctx context.Context, userID uuid.UUID, req CreateLectur
 		return nil, err
 	}
 
-	return lecture, nil
+	return &GenerateLectureResponse{
+		ID:      lecture.ID,
+		Topic:   lecture.Topic,
+		Content: lecture.Content,
+		Status:  lecture.Status,
+	}, nil
 }
 
 func (s *service) GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error) {

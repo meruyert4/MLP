@@ -24,6 +24,12 @@ A production-ready backend API built with Go, following clean architecture princ
 - **Logging**: Zap
 - **Containerization**: Docker
 
+## Quick Links
+
+- 📚 [API Testing with Postman](POSTMAN.md) - Complete guide for testing all endpoints
+- 📦 [Postman Collection](MLP.postman_collection.json) - Import into Postman
+- 🔧 [Postman Environment](MLP.postman_environment.json) - Environment variables
+
 ## Project Structure
 
 ```

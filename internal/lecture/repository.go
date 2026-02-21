@@ -24,10 +24,10 @@ func NewRepository(db *pgxpool.Pool) Repository {
 
 func (r *repository) Create(ctx context.Context, lecture *Lecture) error {
 	query := `
-		INSERT INTO lectures (id, user_id, topic, content, created_at)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO lectures (id, user_id, topic, content, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, err := r.db.Exec(ctx, query, lecture.ID, lecture.UserID, lecture.Topic, lecture.Content, lecture.CreatedAt)
+	_, err := r.db.Exec(ctx, query, lecture.ID, lecture.UserID, lecture.Topic, lecture.Content, lecture.Status, lecture.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create lecture: %w", err)
 	}
@@ -36,7 +36,7 @@ func (r *repository) Create(ctx context.Context, lecture *Lecture) error {
 
 func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error) {
 	query := `
-		SELECT id, user_id, topic, content, created_at
+		SELECT id, user_id, topic, content, status, created_at
 		FROM lectures
 		WHERE id = $1
 	`
@@ -46,6 +46,7 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error
 		&lecture.UserID,
 		&lecture.Topic,
 		&lecture.Content,
+		&lecture.Status,
 		&lecture.CreatedAt,
 	)
 	if err != nil {
@@ -56,7 +57,7 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Lecture, error
 
 func (r *repository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]Lecture, error) {
 	query := `
-		SELECT id, user_id, topic, content, created_at
+		SELECT id, user_id, topic, content, status, created_at
 		FROM lectures
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -70,7 +71,7 @@ func (r *repository) GetByUserID(ctx context.Context, userID uuid.UUID) ([]Lectu
 	var lectures []Lecture
 	for rows.Next() {
 		var lecture Lecture
-		if err := rows.Scan(&lecture.ID, &lecture.UserID, &lecture.Topic, &lecture.Content, &lecture.CreatedAt); err != nil {
+		if err := rows.Scan(&lecture.ID, &lecture.UserID, &lecture.Topic, &lecture.Content, &lecture.Status, &lecture.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan lecture: %w", err)
 		}
 		lectures = append(lectures, lecture)

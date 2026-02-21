@@ -21,6 +21,47 @@ func NewHandler(service Service, logger *zap.Logger) *Handler {
 	}
 }
 
+func (h *Handler) CreateFromAudio(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		h.logger.Error("failed to parse multipart form", zap.Error(err))
+		respondWithError(w, http.StatusBadRequest, "invalid form data")
+		return
+	}
+
+	audioIDStr := r.FormValue("audio_id")
+	if audioIDStr == "" {
+		respondWithError(w, http.StatusBadRequest, "audio_id is required")
+		return
+	}
+
+	audioID, err := uuid.Parse(audioIDStr)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "invalid audio_id")
+		return
+	}
+
+	file, header, err := r.FormFile("avatar")
+	if err != nil {
+		h.logger.Error("failed to get avatar file", zap.Error(err))
+		respondWithError(w, http.StatusBadRequest, "avatar file is required")
+		return
+	}
+	defer file.Close()
+
+	req := CreateVideoRequest{
+		AudioID: audioID,
+	}
+
+	video, err := h.service.CreateFromAudio(r.Context(), req, file, header.Filename)
+	if err != nil {
+		h.logger.Error("failed to create video", zap.Error(err), zap.String("audio_id", audioIDStr))
+		respondWithError(w, http.StatusInternalServerError, "failed to create video, please try again")
+		return
+	}
+
+	respondWithJSON(w, http.StatusAccepted, video)
+}
+
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
@@ -31,7 +72,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	video, err := h.service.GetByID(r.Context(), id)
 	if err != nil {
-		h.logger.Error("failed to get video", zap.Error(err))
+		h.logger.Error("failed to get video", zap.Error(err), zap.String("video_id", idStr))
 		respondWithError(w, http.StatusNotFound, "video not found")
 		return
 	}
@@ -49,8 +90,8 @@ func (h *Handler) GetByAudioID(w http.ResponseWriter, r *http.Request) {
 
 	videos, err := h.service.GetByAudioID(r.Context(), audioID)
 	if err != nil {
-		h.logger.Error("failed to get videos", zap.Error(err))
-		respondWithError(w, http.StatusInternalServerError, "failed to get videos")
+		h.logger.Error("failed to get videos", zap.Error(err), zap.String("audio_id", audioIDStr))
+		respondWithError(w, http.StatusInternalServerError, "failed to retrieve videos")
 		return
 	}
 

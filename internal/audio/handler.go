@@ -21,6 +21,29 @@ func NewHandler(service Service, logger *zap.Logger) *Handler {
 	}
 }
 
+func (h *Handler) CreateFromLecture(w http.ResponseWriter, r *http.Request) {
+	var req CreateAudioRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("failed to decode request", zap.Error(err))
+		respondWithError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.LectureID == uuid.Nil {
+		respondWithError(w, http.StatusBadRequest, "lecture_id is required")
+		return
+	}
+
+	audio, err := h.service.CreateFromLecture(r.Context(), req)
+	if err != nil {
+		h.logger.Error("failed to create audio", zap.Error(err), zap.String("lecture_id", req.LectureID.String()))
+		respondWithError(w, http.StatusInternalServerError, "failed to create audio, please try again")
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, audio)
+}
+
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := uuid.Parse(idStr)
@@ -31,7 +54,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	audio, err := h.service.GetByID(r.Context(), id)
 	if err != nil {
-		h.logger.Error("failed to get audio", zap.Error(err))
+		h.logger.Error("failed to get audio", zap.Error(err), zap.String("audio_id", idStr))
 		respondWithError(w, http.StatusNotFound, "audio not found")
 		return
 	}
@@ -49,8 +72,8 @@ func (h *Handler) GetByLectureID(w http.ResponseWriter, r *http.Request) {
 
 	audios, err := h.service.GetByLectureID(r.Context(), lectureID)
 	if err != nil {
-		h.logger.Error("failed to get audios", zap.Error(err))
-		respondWithError(w, http.StatusInternalServerError, "failed to get audios")
+		h.logger.Error("failed to get audios", zap.Error(err), zap.String("lecture_id", lectureIDStr))
+		respondWithError(w, http.StatusInternalServerError, "failed to retrieve audios")
 		return
 	}
 

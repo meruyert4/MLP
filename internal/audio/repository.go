@@ -24,10 +24,10 @@ func NewRepository(db *pgxpool.Pool) Repository {
 
 func (r *repository) Create(ctx context.Context, audio *Audio) error {
 	query := `
-		INSERT INTO audios (id, lecture_id, url, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO audios (id, lecture_id, url, language, voice, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	_, err := r.db.Exec(ctx, query, audio.ID, audio.LectureID, audio.URL, audio.CreatedAt)
+	_, err := r.db.Exec(ctx, query, audio.ID, audio.LectureID, audio.URL, audio.Language, audio.Voice, audio.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to create audio: %w", err)
 	}
@@ -36,7 +36,7 @@ func (r *repository) Create(ctx context.Context, audio *Audio) error {
 
 func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Audio, error) {
 	query := `
-		SELECT id, lecture_id, url, created_at
+		SELECT id, lecture_id, url, language, voice, created_at
 		FROM audios
 		WHERE id = $1
 	`
@@ -45,6 +45,8 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Audio, error) 
 		&audio.ID,
 		&audio.LectureID,
 		&audio.URL,
+		&audio.Language,
+		&audio.Voice,
 		&audio.CreatedAt,
 	)
 	if err != nil {
@@ -55,7 +57,7 @@ func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*Audio, error) 
 
 func (r *repository) GetByLectureID(ctx context.Context, lectureID uuid.UUID) ([]Audio, error) {
 	query := `
-		SELECT id, lecture_id, url, created_at
+		SELECT id, lecture_id, url, language, voice, created_at
 		FROM audios
 		WHERE lecture_id = $1
 		ORDER BY created_at DESC
@@ -69,7 +71,7 @@ func (r *repository) GetByLectureID(ctx context.Context, lectureID uuid.UUID) ([
 	var audios []Audio
 	for rows.Next() {
 		var audio Audio
-		if err := rows.Scan(&audio.ID, &audio.LectureID, &audio.URL, &audio.CreatedAt); err != nil {
+		if err := rows.Scan(&audio.ID, &audio.LectureID, &audio.URL, &audio.Language, &audio.Voice, &audio.CreatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan audio: %w", err)
 		}
 		audios = append(audios, audio)

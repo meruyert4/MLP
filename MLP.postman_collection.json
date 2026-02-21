@@ -1,0 +1,447 @@
+{
+	"info": {
+		"_postman_id": "mlp-api-collection",
+		"name": "MLP API - Complete Lecture Generation",
+		"description": "Production-ready backend API for generating lectures with AI, converting to audio, and creating lip-synced videos",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "health"]
+						},
+						"description": "Check if the API is running and healthy"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"user_id\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"description": "Register a new user account"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"jwt_token\", jsonData.token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						},
+						"description": "Login with email and password to receive JWT token"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Lectures (AI Generated)",
+			"item": [
+				{
+					"name": "Generate Lecture with AI",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"lecture_id\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"topic\": \"Introduction to Machine Learning\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/lectures",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "lectures"]
+						},
+						"description": "Generate a lecture using Gemini AI. Provide only a topic, and AI will generate the full content."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All User Lectures",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/lectures",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "lectures"]
+						},
+						"description": "Get all lectures for the authenticated user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Lecture by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/lectures/{{lecture_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "lectures", "{{lecture_id}}"]
+						},
+						"description": "Get a specific lecture by ID"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Audios (VoiceRSS TTS)",
+			"item": [
+				{
+					"name": "Create Audio from Lecture",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"audio_id\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lecture_id\": \"{{lecture_id}}\",\n    \"language\": \"en-us\",\n    \"voice\": \"Amy\",\n    \"rate\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/audios",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audios"]
+						},
+						"description": "Convert lecture text to speech using VoiceRSS API and store in MinIO"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Audio by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/audios/{{audio_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audios", "{{audio_id}}"]
+						},
+						"description": "Get a specific audio by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Audios by Lecture ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/audios/lecture/{{lecture_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "audios", "lecture", "{{lecture_id}}"]
+						},
+						"description": "Get all audios for a specific lecture"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Videos (Lip Sync)",
+			"item": [
+				{
+					"name": "Create Video from Audio + Avatar",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 202) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"video_id\", jsonData.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio_id",
+									"value": "{{audio_id}}",
+									"type": "text"
+								},
+								{
+									"key": "avatar",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/videos",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "videos"]
+						},
+						"description": "Create a lip-synced video from audio and avatar image. Upload avatar image as form-data."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Video by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/videos/{{video_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "videos", "{{video_id}}"]
+						},
+						"description": "Get video status and URL. Status can be: processing, completed, failed, timeout"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Videos by Audio ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/videos/audio/{{audio_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "videos", "audio", "{{audio_id}}"]
+						},
+						"description": "Get all videos for a specific audio"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "lecture_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "audio_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "video_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

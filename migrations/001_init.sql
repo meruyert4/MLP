@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS lectures (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     topic VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'completed',
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -28,6 +29,8 @@ CREATE TABLE IF NOT EXISTS audios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     lecture_id UUID NOT NULL REFERENCES lectures(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
+    language VARCHAR(10) NOT NULL DEFAULT 'en-us',
+    voice VARCHAR(50),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -37,7 +40,8 @@ CREATE INDEX idx_audios_lecture_id ON audios(lecture_id);
 CREATE TABLE IF NOT EXISTS videos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     audio_id UUID NOT NULL REFERENCES audios(id) ON DELETE CASCADE,
-    url TEXT NOT NULL,
+    url TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'processing',
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
