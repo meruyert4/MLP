@@ -17,31 +17,13 @@ type Client struct {
 	client  *http.Client
 }
 
-type GenerateRequest struct {
-	Contents []Content `json:"contents"`
+type cohereRequest struct {
+	Message string `json:"message"`
+	Model   string `json:"model"`
+	Stream  bool   `json:"stream"`
 }
 
-type Content struct {
-	Parts []Part `json:"parts"`
-}
-
-type Part struct {
-	Text string `json:"text"`
-}
-
-type GenerateResponse struct {
-	Candidates []Candidate `json:"candidates"`
-}
-
-type Candidate struct {
-	Content ContentResponse `json:"content"`
-}
-
-type ContentResponse struct {
-	Parts []PartResponse `json:"parts"`
-}
-
-type PartResponse struct {
+type cohereResponse struct {
 	Text string `json:"text"`
 }
 
@@ -49,7 +31,7 @@ func NewClient(apiKey, model string) *Client {
 	return &Client{
 		apiKey:  apiKey,
 		model:   model,
-		baseURL: "https://generativelanguage.googleapis.com/v1",
+		baseURL: "https://api.cohere.com/v1/chat",
 		client: &http.Client{
 			Timeout: 60 * time.Second,
 		},
@@ -67,16 +49,12 @@ The lecture should:
 5. End with a conclusion and key takeaways
 
 Write in a clear, educational tone suitable for text-to-speech conversion.
-Aim for approximately 50-100 words.`, topic)
+Aim for approximately 500-800 words.`, topic)
 
-	reqBody := GenerateRequest{
-		Contents: []Content{
-			{
-				Parts: []Part{
-					{Text: prompt},
-				},
-			},
-		},
+	reqBody := cohereRequest{
+		Message: prompt,
+		Model:   c.model,
+		Stream:  false,
 	}
 
 	jsonData, err := json.Marshal(reqBody)
@@ -84,15 +62,13 @@ Aim for approximately 50-100 words.`, topic)
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Construct URL dynamically with proper format
-	url := fmt.Sprintf("%s/models/%s:generateContent?key=%s", c.baseURL, c.model, c.apiKey)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.baseURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.apiKey))
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -109,14 +85,14 @@ Aim for approximately 50-100 words.`, topic)
 		return "", fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var genResp GenerateResponse
+	var genResp cohereResponse
 	if err := json.Unmarshal(body, &genResp); err != nil {
 		return "", fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	if len(genResp.Candidates) == 0 || len(genResp.Candidates[0].Content.Parts) == 0 {
+	if genResp.Text == "" {
 		return "", fmt.Errorf("no content generated")
 	}
 
-	return genResp.Candidates[0].Content.Parts[0].Text, nil
+	return genResp.Text, nil
 }

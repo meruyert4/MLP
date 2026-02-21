@@ -69,7 +69,7 @@ func main() {
 	}
 	logger.Info("connected to minio and ensured buckets")
 
-	geminiClient := gemini.NewClient(cfg.API.GeminiKey, cfg.API.GeminiModel)
+	geminiClient := gemini.NewClient(cfg.API.CohereKey, cfg.API.CohereModel)
 	voiceRSSClient := voicerss.NewClient(cfg.API.VoiceRSSKey)
 	lipsyncClient := lipsync.NewClient("http://lipsync:5000")
 

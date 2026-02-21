@@ -44,8 +44,8 @@ type MinIOConfig struct {
 }
 
 type APIConfig struct {
-	GeminiKey    string
-	GeminiModel  string
+	CohereKey    string
+	CohereModel  string
 	VoiceRSSKey  string
 	SyncKey      string
 }
@@ -85,8 +85,8 @@ func Load() (*Config, error) {
 			UseSSL:        getEnv("MINIO_USE_SSL", "false") == "true",
 		},
 		API: APIConfig{
-			GeminiKey:   getEnv("GEMINI_API_KEY", ""),
-			GeminiModel: getEnv("GEMINI_MODEL", "gemini-2.0-flash-lite"),
+			CohereKey:   getEnv("COHERE_API_KEY", ""),
+			CohereModel: getEnv("COHERE_MODEL", "command-a-03-2025"),
 			VoiceRSSKey: getEnv("VOICERSS_API_KEY", ""),
 			SyncKey:     getEnv("SYNC_API_KEY", ""),
 		},
