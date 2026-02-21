@@ -1,6 +1,7 @@
 package voicerss
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -59,12 +60,12 @@ func (c *Client) TextToSpeech(ctx context.Context, req TTSRequest) ([]byte, erro
 		params.Set("r", fmt.Sprintf("%d", req.Rate))
 	}
 
-	fullURL := fmt.Sprintf("%s?%s", c.baseURL, params.Encode())
-
-	httpReq, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
+	// Use POST to avoid URL length limits with long lecture text (VoiceRSS supports both GET and POST)
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.baseURL, bytes.NewBufferString(params.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
